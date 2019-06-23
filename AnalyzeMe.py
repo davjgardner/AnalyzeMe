@@ -2,27 +2,49 @@
 
 import json
 import sys
+from datetime import datetime
+from datetime import date
+from dateutil import tz
+
+import matplotlib
+matplotlib.use('gtk3agg')
+import matplotlib.pyplot as plt
+import numpy as np
 
 # print messages to file in a human-readable format
 def humanReadable(data, argv):
-    outfname = argv[2] if len(argv) >=3 else 'out.txt'
+    outfname = argv[3] if len(argv) >=4 else 'out.txt'
     outfile = open(outfname, "w")
     for message in reversed(data):
         name = message["name"] if message["name"] != None else ""
-        liked = "[<3]" if len(message["favorited_by"]) > 0 else "[  ]"
+        liked = "[<3]" if len(message["favorited_by"]) > 0 else ""
+        time = datetime.fromtimestamp(message['created_at'], tz=tz.tzlocal())
         #attachment = "[" + message["attachments"][0] + "]" if len(message["attachments"]) > 0 else ""
         text = message["text"] if message["text"] != None else ""
-        outfile.write("{} {}: {}\n".format(name, liked, text))
-        print("Written output to {}".format(outfname))
+        outfile.write("[{}/{:02d}/{:02d} {:02d}:{:02d}] {} {}: {}\n".format(time.year, time.month, time.day,
+                                                            time.hour, time.minute, name, liked, text))
+    return "Written output to {}".format(outfname)
 
 # return a dictionary of username->number of messages
 def messageCount(data, argv):
     users = {}
     for message in data:
         users[message['name']] = users.get(message['name'], 0) + 1
-    print(users)
+    return users
 
-#return a dictionary of username->average message length
+def messageCountPlot(data, argv):
+    counts = messageCount(data, argv)
+    fig1, ax1 = plt.subplots()
+    fig1.suptitle('Total message count')
+    def pfmt(pct, values):
+        return '{:.1f}% ({})'.format(pct, int(round(pct * sum(values) / 100.0)))
+    wedges, texts, autotexts = ax1.pie(counts.values(), labels=counts.keys(),
+                                       autopct=lambda pct:pfmt(pct, counts.values()))
+    ax1.axis('equal')
+    plt.show()
+
+
+# return a dictionary of username->average message length
 def messageLength(data, argv):
     lens = {}
     msgs = {}
@@ -34,26 +56,68 @@ def messageLength(data, argv):
         msgs[message['name']] = msgs.get(message['name'], 0) + 1
     for user in lens:
         lens[user] = lens[user] / msgs[user]
-    print(lens)
+    return lens
 
+# generate a map of username->number of attachments sent
 def attachmentCount(data, argv):
     attachments = {}
     for message in data:
         a = attachments.get(message['name'], 0)
         attachments[message['name']] = a + len(message['attachments'])
-    print(attachments)
+    return attachments
+
+# count how many messages were sent per day by each user
+# produce a map date->{user->count}
+def messagesPerDay(data, argv):
+    dates = {}
+    for message in data:
+        day = datetime.fromtimestamp(message['created_at'], tz=tz.tzlocal())
+        daystring = "{}/{}/{}".format(day.month, day.day, day.year)
+        if not daystring in dates: dates[daystring] = {}
+        dates[daystring][message['name']] = dates[daystring].get(message['name'], 0) + 1
+    return dates
+
+# produce a histogram of how many messages were sent by each user in each hour of the day
+# returns a map of user to histogram of messages per hour
+def hourHistogram(data, argv):
+    hours = {}
+    for message in data:
+        time = datetime.fromtimestamp(message['created_at'], tz=tz.tzlocal())
+        if not message['name'] in hours:
+            hours[message['name']] = [0] * 24
+        hours[message['name']][time.hour] += 1
+    return hours
+
+def plotHourHistogram(data, argv):
+    hists = hourHistogram(data, argv)
+    xl = range(24)
+    labels = list(map(lambda h: '{}:00'.format(h), xl))
+    x = np.array(xl)
+    width = 0.9
+
+    p1 = plt.bar(x, list(hists.values())[0], width)
+    p2 = plt.bar(x, list(hists.values())[1], width, bottom=list(hists.values())[0])
+    plt.ylabel('Message count')
+    plt.title('Message Distribution by Hour')
+    plt.xticks(x, labels, rotation=90)
+    plt.legend((p1[0], p2[0]), list(hists.keys()))
+    plt.show()
 
 def error(data, argv):
-    print("Unrecognized command: {}".format(argv[1]))
+    return "Unrecognized command: {}".format(argv[2])
 
 cmds = {
-    "len": (messageLength, ''),
-    "attachments": (attachmentCount, ''),
-    "count": (messageCount, ''),
-    "readable": (humanReadable, '[outfile]'),
+    'len': (messageLength, ''),
+    'attachments': (attachmentCount, ''),
+    'count': (messageCount, ''),
+    'countplot': (messageCountPlot, ''),
+    'readable': (humanReadable, '[outfile]'),
+    'perday': (messagesPerDay, ''),
+    'perhour': (hourHistogram, ''),
+    'hourplot': (plotHourHistogram, ''),
 }
 
-usage = "Usage: AnalyzeMe.py messagefile command [args]"
+usage = "Usage: AnalyzeMe.py path/to/message.json command [args]"
 
 if len(sys.argv) >= 1 and (sys.argv[1] == 'help' or sys.argv[2] == 'help'):
     print(usage)
@@ -72,4 +136,4 @@ infile = open(sys.argv[1], "r")
 
 data = json.load(infile)
 
-cmds.get(sys.argv[2], error)[0](data, sys.argv)
+print(cmds.get(sys.argv[2], (error, ''))[0](data, sys.argv))
