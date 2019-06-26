@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import argparse
 import json
 import sys
 from datetime import datetime
@@ -106,34 +107,47 @@ def plotHourHistogram(data, argv):
 def error(data, argv):
     return "Unrecognized command: {}".format(argv[2])
 
+# format: 'name': (func, 'args', 'description'),
 cmds = {
-    'len': (messageLength, ''),
-    'attachments': (attachmentCount, ''),
-    'count': (messageCount, ''),
-    'countplot': (messageCountPlot, ''),
-    'readable': (humanReadable, '[outfile]'),
-    'perday': (messagesPerDay, ''),
-    'perhour': (hourHistogram, ''),
-    'hourplot': (plotHourHistogram, ''),
+    'len': (messageLength, '', 'average message length per user'),
+    'attachments': (attachmentCount, '', 'number of attachments per user'),
+    'count': (messageCount, '', 'number of messages per user'),
+    'countplot': (messageCountPlot, '', 'plot number of messages per user'),
+    'readable': (humanReadable, '[outfile]', 'output in a human-readable format'),
+    'perday': (messagesPerDay, '', 'number of messages per day'),
+    'perhour': (hourHistogram, '', 'histogram of number of messages per hour'),
+    'hourplot': (plotHourHistogram, '', 'plot per-hour histogram'),
+    'list': (error, '', 'list commands'),
 }
+
+def listcmds(data, argv):
+    print('Available commands:')
+    list(map(lambda s: print('  {} {}: {}'.format(s, cmds[s][1], cmds[s][2])),
+             cmds.keys()))
+
+cmds['list'] = (listcmds, '', 'list commands')
 
 usage = "Usage: AnalyzeMe.py path/to/message.json command [args]"
 
-if len(sys.argv) >= 1 and (sys.argv[1] == 'help' or sys.argv[2] == 'help'):
-    print(usage)
-    print("Available commands: ")
-    list(map(lambda k: print('  {} {}'.format(k, cmds[k][1])), cmds.keys()))
-
-    exit(0)
-
-if len(sys.argv) < 3:
-    print(usage)
-    print("Use analyzeme.py help for a list of available commands.")
-    exit(1)
+#if len(sys.argv) >= 1 and (sys.argv[1] == 'help' or sys.argv[2] == 'help'):
+#    print(usage)
+#    print("Available commands: ")
+#    list(map(lambda k: print('  {} {}'.format(k, cmds[k][1])), cmds.keys()))
+#
+#    exit(0)
 
 
-infile = open(sys.argv[1], "r")
+parser = argparse.ArgumentParser(description='Analyze GroupMe conversations')
+parser.add_argument('data', help='/path/to/message.json', type=argparse.FileType('r'))
+parser.add_argument('command', help='operation to perform')
+parser.add_argument('-o', '--output', help='output file', nargs='?',
+                    type=argparse.FileType('w'), default=sys.stdout)
+
+args = parser.parse_args()
+
+infile = args.data
+#infile = open(args.data, "r")
 
 data = json.load(infile)
 
-print(cmds.get(sys.argv[2], (error, ''))[0](data, sys.argv))
+print(cmds.get(args.command, (error, ''))[0](data, sys.argv))
