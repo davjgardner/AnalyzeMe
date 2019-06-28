@@ -131,35 +131,37 @@ base_parser.add_argument('--output', '-o', help='write output to a file',
 graph_parser = argparse.ArgumentParser(parents=[base_parser], add_help=False)
 graph_parser.add_argument('--plot', '-p', help='plot on a graph', action='store_const', const=True)
 
-len_parser = subparsers.add_parser('len', description='average message length per user',
+len_parser = subparsers.add_parser('len', description='Average message length per user',
                                    parents=[graph_parser])
 len_parser.set_defaults(func=messageLength)
 
 attachments_parser = subparsers.add_parser('attachments',
-                                           description='number of attachments per user',
+                                           description='Number of attachments per user',
                                            parents=[graph_parser])
 attachments_parser.set_defaults(func=attachmentCount)
 
 count_parser = subparsers.add_parser('count',
-                                     description='number of messages per user',
+                                     description='Number of messages per user',
                                      parents=[graph_parser])
 count_parser.set_defaults(func=messageCount)
 
 perday_parser = subparsers.add_parser('perday',
-                                      description='number of messages per day',
+                                      description='Number of messages per day',
                                       parents=[graph_parser])
 perday_parser.set_defaults(func=messagesPerDay)
 
 perhour_parser = subparsers.add_parser('perhour',
-                                       description='aggregate number of messages per hour',
+                                       description='Aggregate number of messages per hour',
                                        parents=[graph_parser])
 perhour_parser.set_defaults(func=hourHistogram)
 
 readable_parser = subparsers.add_parser('readable',
                                         description=
-                                        'convert the data to a human-readable format',
+                                        'Convert the data to a human-readable format',
                                         parents=[base_parser])
 readable_parser.set_defaults(func=humanReadable)
 
 args = parser.parse_args()
+if len(sys.argv) < 2:
+    parser.parse_args(['-h'])
 args.func(args)
