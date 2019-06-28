@@ -17,6 +17,14 @@ Utility to analyze GroupMe conversations. Features include plotting message freq
 
 Call `AnalyzeMe.py` as follows:
 
-`$ ./AnalyzeMe.py path/to/message.json command [args]`
+`$ ./AnalyzeMe.py command path/to/message.json`
 
-Use `./AnalyzeMe.py help` for a list of supported commands.
+For example,
+
+* `$ ./AnalyzeMe.py len message.json --plot`
+
+* `$ ./AnalyzeMe.py readable message.json -o output.txt`
+
+For help on a specific command, run `./AnalyzeMe.py command --help`
+
+Use `./AnalyzeMe.py --help` for a list of supported commands.
