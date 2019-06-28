@@ -16,7 +16,7 @@ import numpy as np
 def humanReadable(args):
     data = json.load(args.data)
     for message in reversed(data):
-        name = message["name"] if message["name"] != None else ""
+        name = message.get('name', '')
         liked = "[<3]" if len(message["favorited_by"]) > 0 else ""
         time = datetime.fromtimestamp(message['created_at'], tz=tz.tzlocal())
         #attachment = "[" + message["attachments"][0] + "]" if len(message["attachments"]) > 0 else ""
@@ -88,7 +88,6 @@ def messagesPerDay(args):
     if args.plot:
         print('no plot yet')
     else:
-        # TODO: probably need to pretty print date
         list(map(lambda d: args.output.write('{}, {}\n'.format(d, dates[d])), dates.keys()))
     return dates
 
