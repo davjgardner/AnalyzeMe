@@ -8,7 +8,6 @@ from datetime import date
 from dateutil import tz
 
 import matplotlib
-matplotlib.use('gtk3agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
