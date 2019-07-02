@@ -30,7 +30,7 @@ def messageCount(args):
         users[message['name']] = users.get(message['name'], 0) + 1
     if args.plot:
         fig1, ax1 = plt.subplots()
-        fig1.suptitle('Total message count')
+        fig1.suptitle('Total Message Count')
         def pfmt(pct, values):
             return '{:.1f}% ({})'.format(pct, int(round(pct * sum(values) / 100.0)))
         wedges, texts, autotexts = ax1.pie(users.values(), labels=users.keys(),
@@ -44,6 +44,7 @@ def messageCount(args):
 # return a dictionary of username->average message length
 def messageLength(args):
     data = json.load(args.data)
+    thresh = args.threshold
     lens = {}
     msgs = {}
     for message in data:
@@ -52,10 +53,17 @@ def messageLength(args):
             else 0
         lens[message['name']] = lens.get(message['name'], 0) + length
         msgs[message['name']] = msgs.get(message['name'], 0) + 1
+    lens = dict(filter(lambda item: msgs[item[0]] > thresh, lens.items()))
+    msgs = dict(filter(lambda item: item[1] > thresh, msgs.items()))
     for user in lens:
         lens[user] = lens[user] / msgs[user]
+    lens = dict(sorted(lens.items(), key=lambda item: item[1]))
     if args.plot:
-        print('no plot yet')
+        p = plt.bar(lens.keys(), lens.values())
+        plt.ylabel('Length in Characters')
+        plt.title('Average Message Length')
+        plt.xticks(rotation=90)
+        plt.show()
     else:
         list(map(lambda u: args.output.write('{}, {}\n'.format(u, lens[u])), lens.keys()))
     return lens
@@ -131,6 +139,9 @@ graph_parser.add_argument('--plot', '-p', help='plot on a graph', action='store_
 
 len_parser = subparsers.add_parser('len', description='Average message length per user',
                                    parents=[graph_parser])
+len_parser.add_argument('--threshold', '-t',
+                        help='Only count users who sent at least n messages',
+                        type=int, default=0)
 len_parser.set_defaults(func=messageLength)
 
 attachments_parser = subparsers.add_parser('attachments',
