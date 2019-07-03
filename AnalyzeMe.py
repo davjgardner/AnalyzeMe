@@ -23,12 +23,18 @@ def humanReadable(args):
         args.output.write("[{}/{:02d}/{:02d} {:02d}:{:02d}] {} {}: {}\n".format(time.year, time.month, time.day,time.hour, time.minute, name, liked, text))
 
 # return a dictionary of username->number of messages
-def messageCount(args):
-    data = json.load(args.data)
-    users = {}
+def count(data):
+    counts = {}
     for message in data:
-        users[message['name']] = users.get(message['name'], 0) + 1
-    if args.plot:
+        counts[message['name']] = counts.get(message['name'], 0) + 1
+    return counts
+
+# display a the number of messages sent by each user
+def cmdCount(args):
+    data = json.load(args.data)
+    users = count(data)
+    users = dict(sorted(users.items(), key=lambda item: item[1]))
+    if args.plot == 'pie':
         fig1, ax1 = plt.subplots()
         fig1.suptitle('Total Message Count')
         def pfmt(pct, values):
@@ -36,6 +42,11 @@ def messageCount(args):
         wedges, texts, autotexts = ax1.pie(users.values(), labels=users.keys(),
                                            autopct=lambda pct:pfmt(pct, users.values()))
         ax1.axis('equal')
+        plt.show()
+    elif args.plot == 'bar':
+        p = plt.bar(users.keys(), users.values())
+        plt.title('Message Count')
+        plt.xticks(rotation=90)
         plt.show()
     else:
         list(map(lambda u: args.output.write('{}, {}\n'.format(u, users[u])), users.keys()))
@@ -81,6 +92,30 @@ def attachmentCount(args):
         list(map(lambda u: args.output.write('{}, {}\n'.format(u, attachments[u])),
                  attachments.keys()))
     return attachments
+
+def likeCount(args):
+    data = json.load(args.data)
+    likes = {}
+    for message in data:
+        l = likes.get(message['name'], 0)
+        likes[message['name']] = l + len(message['favorited_by'])
+    counts = count(data)
+    thresh = args.threshold
+    likes = dict(filter(lambda item: counts[item[0]] > thresh, likes.items()))
+    counts = dict(filter(lambda item: item[1] > thresh, counts.items()))
+    if args.average:
+        counts = count(data)
+        for user in likes:
+            likes[user] = likes[user] / counts[user]
+    likes = dict(sorted(likes.items(), key=lambda item: item[1]))
+    if args.plot:
+        p = plt.bar(likes.keys(), likes.values())
+        plt.title('Average Number of Likes' if args.average else 'Number of Likes')
+        plt.xticks(rotation=90)
+        plt.show()
+    else:
+        list(map(lambda u: args.output.write('{}, {}\n'.format(u, likes[u])),
+                 likes.keys()))
 
 # count how many messages were sent per day by each user
 # produce a map date->{user->count}
@@ -149,10 +184,24 @@ attachments_parser = subparsers.add_parser('attachments',
                                            parents=[graph_parser])
 attachments_parser.set_defaults(func=attachmentCount)
 
+likes_parser = subparsers.add_parser('likes',
+                                     description='Number of likes per user',
+                                     parents=[graph_parser])
+likes_parser.add_argument('--average', '-a',
+                          help="display the users's average number of likes per message",
+                          action='store_const', const=True)
+likes_parser.add_argument('--threshold', '-t',
+                          help='Only count users who sent at least n messages',
+                          type=int, default=0)
+likes_parser.set_defaults(func=likeCount)
+
 count_parser = subparsers.add_parser('count',
                                      description='Number of messages per user',
-                                     parents=[graph_parser])
-count_parser.set_defaults(func=messageCount)
+                                     parents=[base_parser])
+count_parser.add_argument('--plot', '-p',
+                          help='plot on a bar or pie graph',
+                          choices=['bar', 'pie'])
+count_parser.set_defaults(func=cmdCount)
 
 perday_parser = subparsers.add_parser('perday',
                                       description='Number of messages per day',
