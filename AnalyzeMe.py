@@ -1,8 +1,20 @@
 #!/usr/bin/python
 
+#
+# AnalyzeMe.py
+# (c) 2019 David Gardner
+# https://github.com/davjgardner/AnalyzeMe
+#
+# Utilities for analyzing GroupMe conversations
+# Example usage:
+#  $ ./AnalyzeMe.py len 12345678/message.json -p
+# to plot a bar graph of average message lengths
+#
+
 import argparse
 import json
 import sys
+
 from datetime import datetime
 from datetime import date
 from dateutil import tz
