@@ -16,11 +16,15 @@ def humanReadable(args):
     data = json.load(args.data)
     for message in reversed(data):
         name = message.get('name', '')
-        liked = "[<3]" if len(message["favorited_by"]) > 0 else ""
+        nlikes = len(message["favorited_by"])
+        liked = ''
+        if nlikes == 1: liked = '[<3]'
+        elif nlikes > 1: liked = '[{}]'.format(nlikes)
         time = datetime.fromtimestamp(message['created_at'], tz=tz.tzlocal())
-        #attachment = "[" + message["attachments"][0] + "]" if len(message["attachments"]) > 0 else ""
         text = message["text"] if message["text"] != None else ""
-        args.output.write("[{}/{:02d}/{:02d} {:02d}:{:02d}] {} {}: {}\n".format(time.year, time.month, time.day,time.hour, time.minute, name, liked, text))
+        args.output.write("[{}/{:02d}/{:02d} {:02d}:{:02d}] {} {}: {}\n"
+                          .format(time.year, time.month, time.day,time.hour,
+                                  time.minute, name, liked, text))
 
 # return a dictionary of username->number of messages
 def count(data):
@@ -49,7 +53,8 @@ def cmdCount(args):
         plt.xticks(rotation=90)
         plt.show()
     else:
-        list(map(lambda u: args.output.write('{}, {}\n'.format(u, users[u])), users.keys()))
+        list(map(lambda u: args.output.write('{}, {}\n'.format(u, users[u])),
+                 users.keys()))
     return users
 
 # return a dictionary of username->average message length
@@ -130,7 +135,8 @@ def messagesPerDay(args):
     if args.plot:
         print('no plot yet')
     else:
-        list(map(lambda d: args.output.write('{}, {}\n'.format(d, dates[d])), dates.keys()))
+        list(map(lambda d: args.output.write('{}, {}\n'.format(d, dates[d])),
+                 dates.keys()))
     return dates
 
 # produce a histogram of how many messages were sent by each user in each hour of the day
@@ -157,7 +163,8 @@ def hourHistogram(args):
         plt.legend((p1[0], p2[0]), list(hists.keys()))
         plt.show()
     else:
-        list(map(lambda u: args.output.write('{}, {}\n'.format(u, str(hours[u])[1:-1])), hours))
+        list(map(lambda u: args.output.write('{}, {}\n'.format(u, str(hours[u])[1:-1])),
+                 hours))
     return hours
 
 parser = argparse.ArgumentParser(description='Analyze GroupMe conversations')
@@ -170,7 +177,8 @@ base_parser.add_argument('--output', '-o', help='write output to a file',
                          type=argparse.FileType('w'), default=sys.stdout)
 
 graph_parser = argparse.ArgumentParser(parents=[base_parser], add_help=False)
-graph_parser.add_argument('--plot', '-p', help='plot on a graph', action='store_const', const=True)
+graph_parser.add_argument('--plot', '-p', help='plot on a graph',
+                          action='store_const', const=True)
 
 len_parser = subparsers.add_parser('len', description='Average message length per user',
                                    parents=[graph_parser])
